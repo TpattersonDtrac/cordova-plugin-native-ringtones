@@ -15,13 +15,17 @@ RingtoneManager.prototype.getRingtone = function (successCallback, errorCallback
     exec(successCallback, errorCallback, "NativeRingtones", "get", [ringtoneType]);
 };
 
-RingtoneManager.prototype.playRingtone = function (ringtoneUri, playOnce, volume, streamType, successCallback, errorCallback) {
+RingtoneManager.prototype.playRingtone = function (ringtoneUri, playOnce, volume, streamType, successCallback, errorCallback, completeCallback) {
     if (!successCallback) {
         successCallback = function (success) { };
     }
 
     if (!errorCallback) {
         errorCallback = function (error) { };
+    }
+
+    if (!completeCallback) {
+        completeCallback = function (complete) { };
     }
 
     if (typeof playOnce == "undefined") {
@@ -42,6 +46,9 @@ RingtoneManager.prototype.playRingtone = function (ringtoneUri, playOnce, volume
         streamType = -1;
     }
 
+    if(typeof completeCallback === "function") {
+        cordova.exec(completeCallback, errorCallback, "NativeRingtones", "addCompleteListener", [ringtoneUri]);
+    }
     exec(successCallback, errorCallback, "NativeRingtones", "play", [ringtoneUri, playOnce, volume, streamType]);
 };
 
