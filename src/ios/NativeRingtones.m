@@ -124,8 +124,8 @@
     if (playOnce == false) {
         // Set any negative integer value to loop the sound indefinitely until you call the stop() method.
         _audioPlayer.numberOfLoops = -1;
-        self.currentRingtone = _audioPlayer;
     }
+    self.currentRingtone = _audioPlayer;
 
     [_audioPlayer play];
     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
