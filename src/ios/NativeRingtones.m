@@ -10,9 +10,12 @@
 
 @property AVAudioPlayer * currentRingtone;
 
+@property NSMutableDictionary* completeCallbacks;
+
 - (void)get:(CDVInvokedUrlCommand*)command;
 - (void)play:(CDVInvokedUrlCommand*)command;
 - (void)stop:(CDVInvokedUrlCommand*)command;
+- (void)addCompleteListener:(CDVInvokedUrlCommand*)command;
 @end
 
 @implementation NativeRingtones
@@ -92,6 +95,18 @@
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
+- (NSURL*) getFileURL:(NSString*)ringtoneUri
+{
+    NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
+    NSString* pathFromWWW = [NSString stringWithFormat:@"%@/%@", basePath, ringtoneUri];
+
+    NSURL *fileURL = [NSURL fileURLWithPath : pathFromWWW];
+    if( ![[NSFileManager defaultManager] fileExistsAtPath:pathFromWWW]){
+        fileURL = [NSURL fileURLWithPath : ringtoneUri];
+    }
+    return fileURL;
+}
+
 - (void)play:(CDVInvokedUrlCommand*)command
 {
     CDVPluginResult* pluginResult = nil;
@@ -100,13 +115,7 @@
     BOOL playOnce = [[command argumentAtIndex:1 withDefault:[NSNumber numberWithBool:YES]] boolValue];
     NSInteger volume = [[command argumentAtIndex:2] integerValue];
 
-    NSString* basePath = [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"www"];
-    NSString* pathFromWWW = [NSString stringWithFormat:@"%@/%@", basePath, ringtoneUri];
-
-    NSURL *fileURL = [NSURL fileURLWithPath : pathFromWWW];
-    if( ![[NSFileManager defaultManager] fileExistsAtPath:pathFromWWW]){
-        fileURL = [NSURL fileURLWithPath : ringtoneUri];
-    }
+    NSURL *fileURL = [self getFileURL: ringtoneUri];
     CFURLRef soundFileURLRef = (CFURLRef) CFBridgingRetain(fileURL);
 
     if (self.currentRingtone != nil && playOnce == false) {
@@ -115,7 +124,10 @@
     }
 
     AVAudioPlayer *_audioPlayer;
+
     _audioPlayer = [[AVAudioPlayer alloc] initWithContentsOfURL:fileURL error:nil];
+    _audioPlayer.delegate = self;
+
     if(volume < 0){
         _audioPlayer.volume = 1.0;
     }else{
@@ -125,8 +137,8 @@
         // Set any negative integer value to loop the sound indefinitely until you call the stop() method.
         _audioPlayer.numberOfLoops = -1;
     }
-    self.currentRingtone = _audioPlayer;
 
+    self.currentRingtone = _audioPlayer;
     [_audioPlayer play];
     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
 
@@ -146,6 +158,29 @@
     }
 
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
+    if (self.completeCallbacks != nil) {
+        NSString* currentAudioID = player.url;
+        NSString* callbackId = self.completeCallbacks[currentAudioID];
+        if (callbackId) {
+            CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:callbackId];
+            [self.completeCallbacks removeObjectForKey:currentAudioID];
+        }
+    }
+}
+
+- (void) addCompleteListener:(CDVInvokedUrlCommand *)command
+{
+    NSArray* arguments = command.arguments;
+    NSString *ringtoneUri = [arguments objectAtIndex:0];
+
+    if(self.completeCallbacks == nil) {
+        self.completeCallbacks = [NSMutableDictionary dictionary];
+    }
+    self.completeCallbacks[[self getFileURL: ringtoneUri]] = command.callbackId;
 }
 
 @end
