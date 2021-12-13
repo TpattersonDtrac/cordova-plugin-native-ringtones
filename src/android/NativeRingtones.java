@@ -22,6 +22,9 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.database.Cursor;
 import android.content.Context;
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.PluginResult;
+import org.apache.cordova.PluginResult.Status;
 
 /**
  * This class echoes a string called from JavaScript.
@@ -29,18 +32,31 @@ import android.content.Context;
 public class NativeRingtones extends CordovaPlugin {
 
     private static MediaPlayer currentRingtone = null;
+    private static HashMap<String, CallbackContext> completeCallbacks;
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         if (action.equals("get")){
             return this.get(args.getString(0), callbackContext);
         }
-        if (action.equals("play")){
+        else if (action.equals("play")){
             // ringtoneUri, playOnce, volume, streamType
             return this.play(args.getString(0), args.getBoolean(1), args.getInt(2), args.getInt(3), callbackContext);
         }
-        if (action.equals("stop")){
+        else if (action.equals("stop")){
             return this.stop(callbackContext);
+        }
+        else if (action.equals("addCompleteListener")) {
+            if (completeCallbacks == null) {
+                completeCallbacks = new HashMap<String, CallbackContext>();
+            }
+            try {
+                String audioID = args.getString(0);
+                completeCallbacks.put(audioID, callbackContext);
+            } catch (JSONException e) {
+                callbackContext.sendPluginResult(new PluginResult(Status.ERROR, e.toString()));
+            }
+            return true;
         }
         return false;
     }
@@ -114,14 +130,24 @@ public class NativeRingtones extends CordovaPlugin {
             ringtoneSound.setAudioStreamType(streamType);
             if(volume >= 0) ringtoneSound.setVolume(volume * 0.01f, volume * 0.01f);
             ringtoneSound.prepare();
-
-            if (!playOnce) {
-                currentRingtone = ringtoneSound;
-            } else {
+            currentRingtone = ringtoneSound;
+            if (playOnce) {
                 ringtoneSound.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     public void onCompletion(MediaPlayer mp) {
                         mp.stop();
                         mp.release();
+                        if (completeCallbacks != null) {
+                            CallbackContext callbackContext = completeCallbacks.get(ringtoneUri);
+                            if (callbackContext != null) {
+                                try {
+                                    JSONObject done = new JSONObject();
+                                    done.put("id", ringtoneUri);
+                                    callbackContext.sendPluginResult(new PluginResult(Status.OK, done));
+                                } catch (JSONException e) {
+                                    callbackContext.sendPluginResult(new PluginResult(Status.ERROR, e.toString()));
+                                }
+                            }
+                        }
                     }
                 });
             }
