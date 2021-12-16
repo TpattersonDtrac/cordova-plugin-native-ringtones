@@ -134,6 +134,7 @@ public class NativeRingtones extends CordovaPlugin {
             if (playOnce) {
                 ringtoneSound.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     public void onCompletion(MediaPlayer mp) {
+                        currentRingtone = null;
                         mp.stop();
                         mp.release();
                         if (completeCallbacks != null) {

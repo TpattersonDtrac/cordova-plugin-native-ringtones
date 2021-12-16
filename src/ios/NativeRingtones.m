@@ -161,6 +161,7 @@
 }
 
 - (void)audioPlayerDidFinishPlaying:(AVAudioPlayer *)player successfully:(BOOL)flag{
+    self.currentRingtone = nil;
     if (self.completeCallbacks != nil) {
         NSString* currentAudioID = player.url;
         NSString* callbackId = self.completeCallbacks[currentAudioID];
