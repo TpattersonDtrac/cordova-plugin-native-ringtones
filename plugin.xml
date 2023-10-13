@@ -20,7 +20,10 @@
         <config-file parent="/*" target="AndroidManifest.xml">
             <uses-permission android:name="android.permission.WRITE_SETTINGS" />
             <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-permission
+                android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+                android:maxSdkVersion="32"
+            />
         </config-file>
         <source-file src="src/android/NativeRingtones.java" target-dir="src/cordova/plugin/nativeRingtones/" />
     </platform>
